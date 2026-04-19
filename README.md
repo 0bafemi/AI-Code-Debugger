@@ -162,6 +162,8 @@ Confidence: 100%
 
 ## Testing Summary
 
+**Results:** 4/4 test cases passed on first attempt; 18/18 individual pytest assertions passed. Confidence scores averaged 100% across all cases. The AI struggled when no expected-behavior description was provided — it occasionally flagged valid boundary comparisons as bugs. Accuracy improved significantly after adding explicit JSON format requirements to the system prompt.
+
 > Run `python test_harness.py` to reproduce.
 
 | Test Case | Bugs Found | Tests | Status |
