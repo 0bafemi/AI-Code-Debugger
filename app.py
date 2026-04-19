@@ -3,7 +3,7 @@ import os
 
 import streamlit as st
 
-from agents import DiagnosisAgent, RepairAgent
+from agents import DiagnosisAgent, PlanningAgent, RepairAgent
 from verifier import run_tests
 
 logging.basicConfig(
@@ -82,8 +82,34 @@ run_clicked = st.button(
 
 # ── Pipeline ──────────────────────────────────────────────────────────────────
 if run_clicked and code_input:
+    plan_agent = PlanningAgent()
     diag_agent = DiagnosisAgent()
     repair_agent = RepairAgent()
+
+    # ── Stage 0: Debugging Plan ───────────────────────────────────────────────
+    with st.expander("🗺️ Stage 0: Debugging Strategy (Agentic Planning)", expanded=True):
+        with st.spinner("Generating debugging plan…"):
+            plan = plan_agent.plan(code_input, expected_behavior)
+
+        if "error" in plan:
+            st.warning(f"Planning error: {plan['error']}")
+        else:
+            st.write(f"**Approach:** {plan.get('approach', '')}")
+            steps = plan.get("steps", [])
+            if steps:
+                st.write("**Plan steps:**")
+                for s in steps:
+                    st.write(
+                        f"**Step {s.get('step', '?')} — {s.get('action', '')}**  \n"
+                        f"*Why:* {s.get('reasoning', '')}  \n"
+                        f"*Expected outcome:* {s.get('expected_outcome', '')}"
+                    )
+            priority = plan.get("priority_areas", [])
+            if priority:
+                st.write(f"**Priority areas:** {', '.join(priority)}")
+            risk = plan.get("risk_assessment", "")
+            if risk:
+                st.caption(f"Risk assessment: {risk}")
 
     # ── Stage 1: Diagnosis ────────────────────────────────────────────────────
     with st.expander("🔎 Stage 1: Bug Diagnosis (RAG-Enhanced)", expanded=True):

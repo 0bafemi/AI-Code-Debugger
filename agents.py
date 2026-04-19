@@ -46,6 +46,26 @@ Return your response as a JSON object with EXACTLY this structure — no markdow
 }"""
 
 
+PLANNING_SYSTEM_PROMPT = """You are an expert debugging strategist. Given buggy Python code, produce a structured multi-step debugging plan BEFORE any fixes are attempted. This plan makes the reasoning process observable.
+
+Return your response as a JSON object with EXACTLY this structure — no markdown fences, no extra text:
+{
+  "approach": "1-2 sentence overall debugging strategy",
+  "steps": [
+    {
+      "step": 1,
+      "action": "what to examine or do in this step",
+      "reasoning": "why this step is necessary",
+      "expected_outcome": "what you expect to discover or achieve"
+    }
+  ],
+  "priority_areas": ["list of functions or code regions to focus on first"],
+  "risk_assessment": "potential complications that could make repair tricky"
+}
+
+Provide 3-5 planning steps that guide a systematic debugging process."""
+
+
 def _parse_json(text: str) -> dict:
     """Parse JSON from an API response, stripping markdown code fences if present."""
     text = text.strip()
@@ -58,6 +78,41 @@ def _parse_json(text: str) -> dict:
                 break
         text = "\n".join(lines[1:end]).strip()
     return json.loads(text)
+
+
+class PlanningAgent:
+    """Stage 0: generates an observable multi-step debugging plan before diagnosis."""
+
+    def __init__(self):
+        self.client = anthropic.Anthropic()
+        self.model = MODEL
+
+    def plan(self, code: str, expected_behavior: str = "") -> dict:
+        logger.info("PlanningAgent: creating plan for %d chars", len(code))
+        user_content = f"Create a debugging plan for this Python code:\n\n```python\n{code}\n```"
+        if expected_behavior.strip():
+            user_content += f"\n\nExpected behavior: {expected_behavior}"
+        try:
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=1024,
+                system=[{
+                    "type": "text",
+                    "text": PLANNING_SYSTEM_PROMPT,
+                    "cache_control": {"type": "ephemeral"},
+                }],
+                messages=[{"role": "user", "content": user_content}],
+            )
+            raw = response.content[0].text
+            result = _parse_json(raw)
+            logger.info("PlanningAgent: plan with %d steps", len(result.get("steps", [])))
+            return result
+        except json.JSONDecodeError as e:
+            logger.error("PlanningAgent: JSON parse error: %s", e)
+            return {"approach": "Standard systematic debugging.", "steps": [], "error": str(e)}
+        except anthropic.APIError as e:
+            logger.error("PlanningAgent: API error: %s", e)
+            return {"approach": "", "steps": [], "error": str(e)}
 
 
 class DiagnosisAgent:
