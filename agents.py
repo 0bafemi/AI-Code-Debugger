@@ -31,6 +31,29 @@ Return your response as a JSON object with EXACTLY this structure — no markdow
 
 If no bugs are found, return: {"bugs": [], "summary": "No bugs detected."}"""
 
+_FEW_SHOT_EXAMPLES = """
+
+### Specialization Examples (few-shot)
+
+Example 1 — Boundary comparison bug:
+Code: def is_adult(age): return age > 18
+Expected: should return True for age 18 and above
+Output: {"bugs": [{"location": "is_adult", "bug_type": "logic", "description": "Uses strict > instead of >=, so age exactly 18 incorrectly returns False — the boundary value is excluded", "severity": "medium"}], "summary": "One logic bug: strict inequality excludes the boundary case."}
+
+Example 2 — Type mismatch in concatenation:
+Code: def fmt(score): return score + "%"
+Output: {"bugs": [{"location": "fmt", "bug_type": "runtime", "description": "Cannot concatenate int and str with +; score must be wrapped in str() or an f-string", "severity": "high"}], "summary": "One runtime TypeError: integer cannot be concatenated to a string."}
+
+Example 3 — Off-by-one in slice:
+Code: def first_n(lst, n): return lst[:n-1]
+Expected: should return exactly n elements
+Output: {"bugs": [{"location": "first_n", "bug_type": "logic", "description": "Slice [:n-1] returns only n-1 elements due to off-by-one error; should be [:n] to return exactly n", "severity": "medium"}], "summary": "One logic bug: off-by-one in slice endpoint."}
+
+Example 4 — Wrong arithmetic sign:
+Code: def update_score(score, outcome):\n    if outcome == 'wrong':\n        return score + 5
+Expected: wrong guesses should penalize the player
+Output: {"bugs": [{"location": "update_score", "bug_type": "logic", "description": "Returns score + 5 on wrong guess instead of score - 5; addition rewards incorrect answers instead of penalizing them", "severity": "high"}], "summary": "One logic bug: wrong arithmetic sign turns a penalty into a reward."}"""
+
 REPAIR_SYSTEM_PROMPT = """You are an expert Python developer. Fix the provided buggy Python code based on the identified bugs.
 
 Return your response as a JSON object with EXACTLY this structure — no markdown fences, no extra text:
@@ -116,10 +139,11 @@ class PlanningAgent:
 
 
 class DiagnosisAgent:
-    def __init__(self, use_rag: bool = True):
+    def __init__(self, use_rag: bool = True, use_few_shot: bool = True):
         self.client = anthropic.Anthropic()
         self.model = MODEL
         self.retriever = BugPatternRetriever() if (use_rag and _RAG_AVAILABLE) else None
+        self._system_prompt = DIAGNOSIS_SYSTEM_PROMPT + (_FEW_SHOT_EXAMPLES if use_few_shot else "")
 
     def diagnose(self, code: str, expected_behavior: str = "") -> dict:
         """Analyze code and return a structured list of bugs."""
@@ -144,7 +168,7 @@ class DiagnosisAgent:
                 system=[
                     {
                         "type": "text",
-                        "text": DIAGNOSIS_SYSTEM_PROMPT,
+                        "text": self._system_prompt,
                         "cache_control": {"type": "ephemeral"},
                     }
                 ],
