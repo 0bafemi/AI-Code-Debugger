@@ -24,7 +24,7 @@ st.set_page_config(
 # ── Header ────────────────────────────────────────────────────────────────────
 st.title("🔍 Game Glitch Investigator — AI Code Debugger")
 st.caption(
-    "Powered by Claude (claude-sonnet-4-20250514) · "
+    "Powered by Claude (claude-sonnet-4-6) · "
     "Original project: Number Guessing Game debugger"
 )
 

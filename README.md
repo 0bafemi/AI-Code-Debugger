@@ -24,6 +24,8 @@ by running tests, then adjusts if they fail.
 
 ## Architecture Overview
 
+![System Architecture Diagram](assets/architecture_diagram.png)
+
 ```
 User Input (Streamlit)
     |  buggy code + optional expected behavior + optional test code

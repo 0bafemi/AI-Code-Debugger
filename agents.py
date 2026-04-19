@@ -6,7 +6,7 @@ import anthropic
 
 logger = logging.getLogger(__name__)
 
-MODEL = "claude-sonnet-4-20250514"
+MODEL = "claude-sonnet-4-6"
 
 DIAGNOSIS_SYSTEM_PROMPT = """You are an expert Python debugger. Analyze the provided Python code and identify all bugs.
 
