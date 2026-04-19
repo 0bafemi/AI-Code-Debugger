@@ -3,7 +3,7 @@
 ## System Overview
 
 **Task:** Automated Python bug diagnosis, repair, and verification  
-**Model:** Claude (claude-sonnet-4-20250514) via Anthropic API  
+**Model:** Claude (claude-sonnet-4-6) via Anthropic API  
 **Original project:** Game Glitch Investigator number guessing game (Modules 1–3)
 
 ---
