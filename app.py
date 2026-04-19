@@ -86,12 +86,19 @@ if run_clicked and code_input:
     repair_agent = RepairAgent()
 
     # ── Stage 1: Diagnosis ────────────────────────────────────────────────────
-    with st.expander("🔎 Stage 1: Bug Diagnosis", expanded=True):
+    with st.expander("🔎 Stage 1: Bug Diagnosis (RAG-Enhanced)", expanded=True):
         with st.spinner("Analyzing code for bugs…"):
             diagnosis = diag_agent.diagnose(code_input, expected_behavior)
 
         bugs = diagnosis.get("bugs", [])
         summary = diagnosis.get("summary", "")
+        retrieved_patterns = diagnosis.get("_retrieved_patterns", [])
+
+        if retrieved_patterns:
+            with st.expander(f"📚 RAG: {len(retrieved_patterns)} pattern(s) retrieved from knowledge base"):
+                st.caption("These bug patterns were injected into the diagnosis prompt to improve accuracy.")
+                for p in retrieved_patterns:
+                    st.write(f"- {p}")
 
         if "error" in diagnosis:
             st.error(f"Diagnosis error: {diagnosis['error']}")

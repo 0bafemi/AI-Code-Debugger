@@ -1,0 +1,230 @@
+[
+  {
+    "id": "off_by_one_range",
+    "name": "Off-by-One in range()",
+    "bug_type": "logic",
+    "keywords": ["range", "loop", "for", "count", "iterate", "n"],
+    "description": "Loop range starts or ends one position off, iterating too many or too few times.",
+    "examples": [
+      {"buggy": "for i in range(1, n):", "fixed": "for i in range(n):"},
+      {"buggy": "for i in range(0, n-1):", "fixed": "for i in range(n):"}
+    ],
+    "fix_hint": "range(n) gives 0..n-1. range(1, n+1) gives 1..n. Check if 0 or 1 should be the first element."
+  },
+  {
+    "id": "off_by_one_slice",
+    "name": "Off-by-One in List Slice",
+    "bug_type": "logic",
+    "keywords": ["slice", "index", "list", "array", "n-1"],
+    "description": "Slice endpoint is off by one, including or excluding one element incorrectly.",
+    "examples": [
+      {"buggy": "lst[:n-1]", "fixed": "lst[:n]"},
+      {"buggy": "lst[1:]", "fixed": "lst[0:]"}
+    ],
+    "fix_hint": "lst[:n] returns first n elements. lst[a:b] returns indices a..b-1 (b is exclusive)."
+  },
+  {
+    "id": "strict_vs_inclusive_comparison",
+    "name": "Strict vs Inclusive Comparison",
+    "bug_type": "logic",
+    "keywords": ["if", "while", "comparison", ">", "<", ">=", "<=", "boundary"],
+    "description": "Uses strict comparison (> or <) when the boundary value should be included (>= or <=).",
+    "examples": [
+      {"buggy": "if age > 18:", "fixed": "if age >= 18:"},
+      {"buggy": "if score < 60:", "fixed": "if score <= 60:"}
+    ],
+    "fix_hint": "Check if the boundary value should be included. Use >= or <= for inclusive bounds."
+  },
+  {
+    "id": "wrong_arithmetic_sign",
+    "name": "Wrong Arithmetic Sign",
+    "bug_type": "logic",
+    "keywords": ["score", "points", "count", "total", "sum", "add", "subtract"],
+    "description": "Uses addition where subtraction is intended, or vice versa.",
+    "examples": [
+      {"buggy": "return score + 5  # penalty", "fixed": "return score - 5"},
+      {"buggy": "return total - bonus", "fixed": "return total + bonus"}
+    ],
+    "fix_hint": "Check whether the operation should increase or decrease the value given the context."
+  },
+  {
+    "id": "type_mismatch_concat",
+    "name": "Type Mismatch in String Concatenation",
+    "bug_type": "runtime",
+    "keywords": ["str", "int", "float", "concat", "string", "format", "TypeError"],
+    "description": "Concatenates a non-string (int, float) with a string using + without conversion.",
+    "examples": [
+      {"buggy": "return score + \"%\"", "fixed": "return str(score) + \"%\""},
+      {"buggy": "print(\"Value: \" + count)", "fixed": "print(\"Value: \" + str(count))"}
+    ],
+    "fix_hint": "Use str() to convert numbers before concatenating. Or use f-strings: f'{score}%'."
+  },
+  {
+    "id": "join_non_strings",
+    "name": "str.join() on Non-String List",
+    "bug_type": "runtime",
+    "keywords": ["join", "list", "int", "float", "map", "str"],
+    "description": "Calls str.join() on a list containing non-string elements, causing TypeError.",
+    "examples": [
+      {"buggy": "\", \".join(numbers)", "fixed": "\", \".join(str(n) for n in numbers)"},
+      {"buggy": "\" \".join([1, 2, 3])", "fixed": "\" \".join(str(x) for x in [1, 2, 3])"}
+    ],
+    "fix_hint": "str.join() requires all elements to be strings. Convert with: str(x) for x in items."
+  },
+  {
+    "id": "mutable_default_argument",
+    "name": "Mutable Default Argument",
+    "bug_type": "logic",
+    "keywords": ["def", "list", "dict", "default", "parameter", "argument"],
+    "description": "Uses a mutable object (list, dict) as a default argument — shared across all calls.",
+    "examples": [
+      {"buggy": "def append_item(item, lst=[]):", "fixed": "def append_item(item, lst=None):\n    if lst is None: lst = []"}
+    ],
+    "fix_hint": "Use None as default and create the mutable inside the function body."
+  },
+  {
+    "id": "integer_division",
+    "name": "Unintended Integer Division",
+    "bug_type": "logic",
+    "keywords": ["/", "//", "divide", "division", "average", "mean", "int", "floor"],
+    "description": "Uses // (floor division) when true division is needed, or vice versa.",
+    "examples": [
+      {"buggy": "average = total // count", "fixed": "average = total / count"},
+      {"buggy": "half = n / 2  # needs int result", "fixed": "half = n // 2"}
+    ],
+    "fix_hint": "Use / for float division, // for integer (floor) division."
+  },
+  {
+    "id": "variable_scope",
+    "name": "Variable Scope Issue",
+    "bug_type": "logic",
+    "keywords": ["global", "local", "scope", "variable", "undefined", "NameError", "nonlocal"],
+    "description": "Variable in inner scope shadows outer, or global variable modified without declaration.",
+    "examples": [
+      {"buggy": "count = 0\ndef inc():\n    count += 1", "fixed": "count = 0\ndef inc():\n    global count\n    count += 1"}
+    ],
+    "fix_hint": "Add 'global' or 'nonlocal' declaration to modify outer-scope variables inside functions."
+  },
+  {
+    "id": "wrong_return_value",
+    "name": "Wrong Return Value",
+    "bug_type": "logic",
+    "keywords": ["return", "True", "False", "None", "result", "value"],
+    "description": "Function returns the wrong value: True/False swapped, wrong variable, or missing return.",
+    "examples": [
+      {"buggy": "def is_valid(x):\n    if x > 0:\n        return False\n    return True", "fixed": "def is_valid(x):\n    if x > 0:\n        return True\n    return False"}
+    ],
+    "fix_hint": "Trace the logic: when condition is True, what should actually be returned?"
+  },
+  {
+    "id": "index_out_of_range",
+    "name": "Index Out of Range",
+    "bug_type": "runtime",
+    "keywords": ["index", "list", "len", "IndexError", "access"],
+    "description": "Accesses a list/string index that doesn't exist (too large or negative out of bounds).",
+    "examples": [
+      {"buggy": "return lst[len(lst)]", "fixed": "return lst[len(lst)-1]"},
+      {"buggy": "first = items[1]", "fixed": "first = items[0]"}
+    ],
+    "fix_hint": "Valid indices are 0..len-1. Use lst[-1] for last element. Guard against empty lists."
+  },
+  {
+    "id": "string_vs_integer_compare",
+    "name": "String vs Integer Comparison",
+    "bug_type": "logic",
+    "keywords": ["input", "int", "str", "compare", "guess", "number"],
+    "description": "Compares a string input directly with an integer — always evaluates to False.",
+    "examples": [
+      {"buggy": "guess = input()\nif guess == 42:", "fixed": "guess = int(input())\nif guess == 42:"}
+    ],
+    "fix_hint": "input() always returns a string. Convert with int() or float() before comparing to numbers."
+  },
+  {
+    "id": "wrong_logical_operator",
+    "name": "Wrong Logical Operator (and vs or)",
+    "bug_type": "logic",
+    "keywords": ["and", "or", "not", "if", "condition", "boolean", "logic"],
+    "description": "Uses 'and' when 'or' is needed (or vice versa), inverting the intended logic.",
+    "examples": [
+      {"buggy": "if x < 0 and x > 100:", "fixed": "if x < 0 or x > 100:"}
+    ],
+    "fix_hint": "A value cannot be both < 0 AND > 100 simultaneously. Use 'or' for mutually exclusive conditions."
+  },
+  {
+    "id": "division_by_zero",
+    "name": "Division or Modulo by Zero",
+    "bug_type": "runtime",
+    "keywords": ["/", "%", "modulo", "divide", "ZeroDivisionError", "denominator", "count", "total"],
+    "description": "Division or modulo operation where the divisor can be zero.",
+    "examples": [
+      {"buggy": "average = total / count", "fixed": "average = total / count if count else 0"}
+    ],
+    "fix_hint": "Guard division: check the divisor is non-zero before dividing."
+  },
+  {
+    "id": "missing_break",
+    "name": "Missing break in Search Loop",
+    "bug_type": "logic",
+    "keywords": ["for", "while", "loop", "break", "found", "search"],
+    "description": "Loop continues after finding the target, overwriting the result or wasting computation.",
+    "examples": [
+      {"buggy": "for i, x in enumerate(lst):\n    if x == target:\n        result = i  # no break", "fixed": "for i, x in enumerate(lst):\n    if x == target:\n        result = i\n        break"}
+    ],
+    "fix_hint": "Add 'break' after finding what you're looking for to stop unnecessary iterations."
+  },
+  {
+    "id": "wrong_indentation_logic",
+    "name": "Statement Misplaced Inside Loop",
+    "bug_type": "logic",
+    "keywords": ["indent", "if", "else", "for", "while", "block", "return", "scope"],
+    "description": "Statement is inside a loop block when it should run once outside it, or vice versa.",
+    "examples": [
+      {"buggy": "for item in lst:\n    total += item\n    average = total / len(lst)  # inside!", "fixed": "for item in lst:\n    total += item\naverage = total / len(lst)  # outside"}
+    ],
+    "fix_hint": "Ask: should this run once (outside loop) or every iteration (inside loop)?"
+  },
+  {
+    "id": "shallow_copy",
+    "name": "Reference Copy Instead of Value Copy",
+    "bug_type": "logic",
+    "keywords": ["copy", "list", "dict", "append", "modify", "reference", "original"],
+    "description": "Assigns a list/dict directly (same reference) instead of making a true copy.",
+    "examples": [
+      {"buggy": "new_list = old_list  # same reference!", "fixed": "new_list = old_list.copy()"}
+    ],
+    "fix_hint": "Use .copy() for a shallow copy, or copy.deepcopy() for nested structures."
+  },
+  {
+    "id": "attribute_name_typo",
+    "name": "Attribute or Method Name Typo",
+    "bug_type": "runtime",
+    "keywords": ["AttributeError", "method", "attribute", "class", "object", "self"],
+    "description": "Accesses a misspelled attribute or method name, causing AttributeError at runtime.",
+    "examples": [
+      {"buggy": "lst.appned(item)", "fixed": "lst.append(item)"}
+    ],
+    "fix_hint": "Check spelling of method/attribute names. Use dir(obj) to see available attributes."
+  },
+  {
+    "id": "state_not_reset",
+    "name": "State Not Reset Between Calls",
+    "bug_type": "logic",
+    "keywords": ["reset", "state", "initialize", "session", "game", "round", "score", "counter"],
+    "description": "Mutable state from a previous call is not reset, causing incorrect results on subsequent runs.",
+    "examples": [
+      {"buggy": "def play_game():\n    # score is never reset — carries over", "fixed": "def play_game():\n    score = 0  # reset at start of each game"}
+    ],
+    "fix_hint": "Initialize all state variables at the start of the function, not once at module level."
+  },
+  {
+    "id": "none_check_missing",
+    "name": "Missing None Check",
+    "bug_type": "runtime",
+    "keywords": ["None", "NoneType", "AttributeError", "optional", "return", "default"],
+    "description": "Calls a method or accesses an attribute on a value that can be None, causing AttributeError.",
+    "examples": [
+      {"buggy": "result = get_user(id).name  # get_user may return None", "fixed": "user = get_user(id)\nresult = user.name if user else None"}
+    ],
+    "fix_hint": "Check for None before accessing attributes or calling methods on optional return values."
+  }
+]

@@ -4,6 +4,12 @@ import os
 
 import anthropic
 
+try:
+    from rag import BugPatternRetriever
+    _RAG_AVAILABLE = True
+except ImportError:
+    _RAG_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 MODEL = "claude-sonnet-4-6"
@@ -55,17 +61,26 @@ def _parse_json(text: str) -> dict:
 
 
 class DiagnosisAgent:
-    def __init__(self):
-        self.client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from env
+    def __init__(self, use_rag: bool = True):
+        self.client = anthropic.Anthropic()
         self.model = MODEL
+        self.retriever = BugPatternRetriever() if (use_rag and _RAG_AVAILABLE) else None
 
     def diagnose(self, code: str, expected_behavior: str = "") -> dict:
         """Analyze code and return a structured list of bugs."""
         logger.info("DiagnosisAgent: analyzing %d chars of code", len(code))
 
+        retrieved = []
+        if self.retriever:
+            retrieved = self.retriever.retrieve(code)
+            logger.info("DiagnosisAgent: retrieved %d RAG patterns", len(retrieved))
+
         user_content = f"Analyze this Python code for bugs:\n\n```python\n{code}\n```"
         if expected_behavior.strip():
             user_content += f"\n\nExpected behavior: {expected_behavior}"
+        if retrieved and self.retriever:
+            rag_context = self.retriever.format_for_prompt(retrieved)
+            user_content += f"\n\n{rag_context}"
 
         try:
             response = self.client.messages.create(
@@ -83,6 +98,7 @@ class DiagnosisAgent:
             raw = response.content[0].text
             logger.info("DiagnosisAgent: response received (%d chars)", len(raw))
             result = _parse_json(raw)
+            result["_retrieved_patterns"] = [p["name"] for p in retrieved]
             logger.info("DiagnosisAgent: found %d bug(s)", len(result.get("bugs", [])))
             return result
 
