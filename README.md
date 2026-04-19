@@ -186,10 +186,30 @@ reliability.
 
 ## Reflection
 
-See [model_card.md](model_card.md) for full ethics, bias, and AI collaboration
-reflection.
+Building this system taught me that AI reliability is not binary. The same model
+that perfectly fixes a scoring bug can hallucinate an "issue" with a correct
+comparison operator. Structured prompts with explicit JSON schemas dramatically
+reduced that variability — but didn't eliminate it. The test harness was the key
+insight: running the pipeline against known-buggy inputs gave me concrete
+pass/fail evidence instead of subjective impressions of whether it "seemed to
+work."
+
+The agentic retry loop was the most instructive part to design. The first version
+just re-sent the same prompt — it failed the same way every time. Feeding the
+actual pytest error output back to the model changed the behavior entirely: the
+model could reason about *why* the fix broke rather than guessing again. That
+taught me that AI agents need structured feedback, not just a second chance.
+
+The biggest trade-off I made was limiting retries to one. More retries would
+improve the pass rate but increase cost and latency unpredictably. One retry
+strikes the right balance for a demo system, and the confidence penalty (×0.7)
+honestly reflects that a fix needing a retry is lower quality than one that
+passes first time.
+
+> For detailed ethics, bias analysis, and AI collaboration examples, see
+> [model_card.md](model_card.md).
 
 ---
 
-*Built on [Claude](https://anthropic.com) (claude-sonnet-4-20250514) ·
+*Built on [Claude](https://anthropic.com) (claude-sonnet-4-6) ·
 Streamlit · pytest*
