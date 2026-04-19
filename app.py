@@ -1,159 +1,220 @@
-import random
+import logging
+import os
+
 import streamlit as st
-from logic_utils import check_guess, get_range_for_difficulty, parse_guess, update_score
 
-# Removed get_range_for_difficulty, parse_guess, and update_score from here - now imported from logic_utils
+from agents import DiagnosisAgent, RepairAgent
+from verifier import run_tests
 
-st.set_page_config(page_title="Glitchy Guesser", page_icon="🎮")
-
-st.title("🎮 Game Glitch Investigator")
-st.caption("An AI-generated guessing game. Something is off.")
-
-st.sidebar.header("Settings")
-
-difficulty = st.sidebar.selectbox(
-    "Difficulty",
-    ["Easy", "Normal", "Hard"],
-    index=1,
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(name)s %(levelname)s %(message)s",
+    handlers=[
+        logging.FileHandler("debugger.log"),
+        logging.StreamHandler(),
+    ],
 )
 
-attempt_limit_map = {
-    "Easy": 6,
-    "Normal": 8,
-    "Hard": 5,
-}
-attempt_limit = attempt_limit_map[difficulty]
-
-low, high = get_range_for_difficulty(difficulty)
-
-st.sidebar.caption(f"Range: {low} to {high}")
-st.sidebar.caption(f"Attempts allowed: {attempt_limit}")
-
-# FIX: Track difficulty in session state to detect changes
-# When difficulty changes, regenerate secret within new range
-# AI COLLABORATION: Refactored difficulty logic using Copilot Agent mode
-if "difficulty" not in st.session_state:
-    st.session_state.difficulty = difficulty
-
-if st.session_state.difficulty != difficulty:
-    # Difficulty has changed - regenerate secret in new range
-    st.session_state.difficulty = difficulty
-    st.session_state.secret = random.randint(low, high)
-    st.session_state.attempts = 1
-    st.session_state.history = []
-
-if "secret" not in st.session_state:
-    st.session_state.secret = random.randint(low, high)
-
-if "attempts" not in st.session_state:
-    st.session_state.attempts = 1
-
-if "score" not in st.session_state:
-    st.session_state.score = 0
-
-if "status" not in st.session_state:
-    st.session_state.status = "playing"
-
-if "history" not in st.session_state:
-    st.session_state.history = []
-
-st.subheader("Make a guess")
-
-# FIX: Use dynamic range from difficulty instead of hardcoded "1 and 100"
-# This ensures the displayed range matches the selected difficulty
-st.info(
-    f"Guess a number between {low} and {high}. "
-    f"Attempts left: {attempt_limit - st.session_state.attempts}"
+st.set_page_config(
+    page_title="Game Glitch Investigator — AI Debugger",
+    page_icon="🔍",
+    layout="wide",
 )
 
-with st.expander("Developer Debug Info"):
-    st.write("Secret:", st.session_state.secret)
-    st.write("Attempts:", st.session_state.attempts)
-    st.write("Score:", st.session_state.score)
-    st.write("Difficulty:", difficulty)
-    st.write("History:", st.session_state.history)
+# ── Header ────────────────────────────────────────────────────────────────────
+st.title("🔍 Game Glitch Investigator — AI Code Debugger")
+st.caption(
+    "Powered by Claude (claude-sonnet-4-20250514) · "
+    "Original project: Number Guessing Game debugger"
+)
 
-# FIX: Wrapped input in st.form() to handle Enter key submission
-# This fixes the issue where users couldn't submit by pressing Enter as instructed
-# AI COLLABORATION: Refactored Enter key logic using Copilot guidance
-with st.form("guess_form"):
-    raw_guess = st.text_input(
-        "Enter your guess:",
-        key=f"guess_input_{difficulty}"
+# ── Sidebar ───────────────────────────────────────────────────────────────────
+with st.sidebar:
+    st.header("How it works")
+    st.markdown(
+        "1. **Paste** buggy Python code\n"
+        "2. Optionally describe expected behavior and/or paste test code\n"
+        "3. Click **Run Debugger**\n\n"
+        "The AI pipeline will:\n"
+        "- Diagnose bugs (type, location, severity)\n"
+        "- Repair the code\n"
+        "- Verify fixes with pytest\n"
+        "- Report a confidence score"
     )
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        # FIX: Changed st.button() to st.form_submit_button() 
-        # form_submit_button triggers on Enter key or button click
-        submit = st.form_submit_button("Submit Guess 🚀")
-
-# New Game and Show Hint buttons placed outside form (they don't need Enter functionality)
-col1, col2 = st.columns(2)
-with col1:
-    new_game = st.button("New Game 🔁")
-with col2:
-    show_hint = st.checkbox("Show hint", value=True)
-
-if new_game:
-    # FIX: Fully reset game state - secret, attempts, score, status, and history
-    # Uses difficulty to generate secret in correct range
-    low, high = get_range_for_difficulty(difficulty)
-    st.session_state.secret = random.randint(low, high)
-    st.session_state.attempts = 1
-    st.session_state.score = 0
-    st.session_state.status = "playing"
-    st.session_state.history = []
-    st.success("New game started.")
-    st.rerun()
-
-if st.session_state.status != "playing":
-    if st.session_state.status == "won":
-        st.success("You already won. Start a new game to play again.")
+    st.divider()
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        st.error("ANTHROPIC_API_KEY is not set.")
     else:
-        st.error("Game over. Start a new game to try again.")
-    st.stop()
+        st.success("API key configured")
 
-if submit:
-    st.session_state.attempts += 1
+# ── Input area ────────────────────────────────────────────────────────────────
+col_code, col_meta = st.columns([2, 1])
 
-    # FIX: Pass low and high range to parse_guess for validation
-    ok, guess_int, err = parse_guess(raw_guess, low, high)
+with col_code:
+    code_input = st.text_area(
+        "Buggy Python code:",
+        height=280,
+        placeholder="def my_func():\n    # paste your buggy code here\n    pass",
+    )
 
-    if not ok:
-        st.session_state.history.append(raw_guess)
-        st.error(err)
-    else:
-        st.session_state.history.append(guess_int)
+with col_meta:
+    expected_behavior = st.text_input(
+        "Expected behavior (optional):",
+        placeholder="e.g. should return True for age >= 18",
+    )
+    test_code_input = st.text_area(
+        "Test code (optional):",
+        height=190,
+        placeholder=(
+            "# Tests must import from 'solution'\n"
+            "from solution import my_func\n\n"
+            "def test_example():\n"
+            "    assert my_func(18) is True"
+        ),
+    )
 
-        # FIX: Removed buggy logic that converted secret to string
-        # Always keep secret as integer for proper comparison
-        outcome, message = check_guess(guess_int, st.session_state.secret)
+api_ready = bool(os.environ.get("ANTHROPIC_API_KEY"))
+run_clicked = st.button(
+    "🚀 Run Debugger",
+    type="primary",
+    disabled=not code_input or not api_ready,
+)
 
-        if show_hint:
-            st.warning(message)
+# ── Pipeline ──────────────────────────────────────────────────────────────────
+if run_clicked and code_input:
+    diag_agent = DiagnosisAgent()
+    repair_agent = RepairAgent()
 
-        st.session_state.score = update_score(
-            current_score=st.session_state.score,
-            outcome=outcome,
-            attempt_number=st.session_state.attempts,
-        )
+    # ── Stage 1: Diagnosis ────────────────────────────────────────────────────
+    with st.expander("🔎 Stage 1: Bug Diagnosis", expanded=True):
+        with st.spinner("Analyzing code for bugs…"):
+            diagnosis = diag_agent.diagnose(code_input, expected_behavior)
 
-        if outcome == "Win":
-            st.balloons()
-            st.session_state.status = "won"
-            st.success(
-                f"You won! The secret was {st.session_state.secret}. "
-                f"Final score: {st.session_state.score}"
-            )
+        bugs = diagnosis.get("bugs", [])
+        summary = diagnosis.get("summary", "")
+
+        if "error" in diagnosis:
+            st.error(f"Diagnosis error: {diagnosis['error']}")
+        elif not bugs:
+            st.info(f"No bugs detected. {summary}")
         else:
-            if st.session_state.attempts >= attempt_limit:
-                st.session_state.status = "lost"
-                st.error(
-                    f"Out of attempts! "
-                    f"The secret was {st.session_state.secret}. "
-                    f"Score: {st.session_state.score}"
+            st.write(f"**{len(bugs)} bug(s) found.** {summary}")
+            for i, bug in enumerate(bugs, 1):
+                icon = {"high": "🔴", "medium": "🟡", "low": "🟢"}.get(
+                    bug.get("severity", ""), "⚪"
                 )
+                st.write(
+                    f"{icon} **Bug {i}** — "
+                    f"`{bug.get('location', '?')}` | "
+                    f"Type: `{bug.get('bug_type', '?')}` | "
+                    f"Severity: **{bug.get('severity', '?')}**"
+                )
+                st.caption(bug.get("description", ""))
 
-st.divider()
-st.caption("Built by an AI that claims this code is production-ready.")
+    # ── Stage 2: Repair ───────────────────────────────────────────────────────
+    fixed_code = code_input
+    fixes = []
+
+    with st.expander("🔧 Stage 2: Bug Repair", expanded=True):
+        with st.spinner("Generating fixes…"):
+            repair_result = repair_agent.repair(code_input, bugs)
+
+        fixed_code = repair_result.get("fixed_code") or code_input
+        fixes = repair_result.get("fixes", [])
+
+        if "error" in repair_result:
+            st.error(f"Repair error: {repair_result['error']}")
+        else:
+            if not fixes:
+                st.info("No individual fixes returned.")
+            for i, fix in enumerate(fixes, 1):
+                st.write(f"**Fix {i}:**")
+                c1, c2 = st.columns(2)
+                with c1:
+                    st.code(fix.get("original_snippet", ""), language="python")
+                    st.caption("Before")
+                with c2:
+                    st.code(fix.get("fixed_snippet", ""), language="python")
+                    st.caption("After")
+                st.write(f"*{fix.get('explanation', '')}*")
+                st.divider()
+
+            with st.expander("Fixed code (full)"):
+                st.code(fixed_code, language="python")
+
+    # ── Stage 3: Verification ─────────────────────────────────────────────────
+    first_result = None
+    retry_result = None
+
+    with st.expander("✅ Stage 3: Verification", expanded=True):
+        if not test_code_input.strip():
+            st.info("No test code provided — skipping verification.")
+        else:
+            with st.spinner("Running tests on fixed code…"):
+                first_result = run_tests(fixed_code, test_code_input)
+
+            if first_result["success"]:
+                st.success(
+                    f"All tests passed on first attempt! "
+                    f"({first_result['passed']}/{first_result['total']})"
+                )
+            else:
+                st.warning(
+                    f"Tests failed ({first_result['passed']}/{first_result['total']} passed). "
+                    "Retrying with test failure context…"
+                )
+                with st.spinner("Retrying repair…"):
+                    retry_repair = repair_agent.retry_repair(
+                        code_input, bugs, first_result["output"]
+                    )
+                    retry_fixed = retry_repair.get("fixed_code") or fixed_code
+                    retry_result = run_tests(retry_fixed, test_code_input)
+
+                if retry_result["success"]:
+                    st.success(
+                        f"Retry succeeded! "
+                        f"({retry_result['passed']}/{retry_result['total']})"
+                    )
+                    fixed_code = retry_fixed
+                else:
+                    st.error(
+                        f"Retry also failed. "
+                        f"({retry_result['passed']}/{retry_result['total']} passed)"
+                    )
+
+            with st.expander("Test output"):
+                st.code(first_result["output"])
+                if retry_result:
+                    st.write("**Retry output:**")
+                    st.code(retry_result["output"])
+
+    # ── Stage 4: Report & Confidence Score ────────────────────────────────────
+    with st.expander("📊 Stage 4: Report & Confidence Score", expanded=True):
+        if first_result:
+            total = first_result["total"] or 1
+            first_rate = first_result["passed"] / total
+
+            if first_result["success"]:
+                confidence = first_rate * 100
+                label = "first-attempt pass rate"
+            elif retry_result:
+                retry_total = retry_result["total"] or 1
+                confidence = retry_result["passed"] / retry_total * 100 * 0.7
+                label = "retry pass rate (x0.7 penalty)"
+            else:
+                confidence = first_rate * 100 * 0.5
+                label = "partial first-attempt (retry failed)"
+        else:
+            confidence = 50.0
+            label = "no tests provided — uncertain"
+
+        st.metric("Confidence Score", f"{confidence:.0f}%", label)
+        st.progress(min(confidence / 100, 1.0))
+
+        st.write("### Summary")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Bugs Found", len(bugs))
+        c2.metric("Fixes Applied", len(fixes))
+        if first_result:
+            best = retry_result if retry_result else first_result
+            c3.metric("Tests Passed", f"{best['passed']}/{best['total']}")
