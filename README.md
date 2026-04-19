@@ -20,7 +20,7 @@ by running tests, then adjusts if they fail.
 
 ## Loom Video Walkthrough
 
-> 🎬 **[INSERT LOOM VIDEO LINK HERE]**
+> 🎬 **[Watch the walkthrough on Loom](https://www.loom.com/share/fce78a564fd64599a471da675c369ed5)**
 
 ## Architecture Overview
 
@@ -210,6 +210,10 @@ passes first time.
 
 > For detailed ethics, bias analysis, and AI collaboration examples, see
 > [model_card.md](model_card.md).
+
+## Portfolio Reflection
+
+Building this system taught me that being an AI engineer means designing for failure, not just for the happy path. The first version of the retry loop re-sent the same prompt and failed the same way every time — it took feeding the actual pytest error back to the model before the behavior changed. That moment crystallized something: AI agents need structured feedback, not just second chances. I also learned that measurement matters more than intuition. I was confident the RAG retriever would help, but I didn't actually know until I ran `rag_eval.py` and compared descriptions side by side. This project reflects how I want to work as an AI engineer: build the thing, then build the test that proves it works, and treat the AI as a collaborator whose suggestions I evaluate critically rather than accept blindly.
 
 ---
 
