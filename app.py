@@ -92,7 +92,7 @@ if run_clicked and code_input:
             plan = plan_agent.plan(code_input, expected_behavior)
 
         if "error" in plan:
-            st.warning(f"Planning error: {plan['error']}")
+            st.warning("Planning step encountered a formatting issue — proceeding with diagnosis.")
         else:
             st.write(f"**Approach:** {plan.get('approach', '')}")
             steps = plan.get("steps", [])

@@ -86,7 +86,10 @@ Return your response as a JSON object with EXACTLY this structure — no markdow
   "risk_assessment": "potential complications that could make repair tricky"
 }
 
-Provide 3-5 planning steps that guide a systematic debugging process."""
+Rules:
+- Provide 3-5 planning steps.
+- Every string value must be on a single line — no newlines, no code snippets inside field values.
+- Do not include code examples inside any JSON field."""
 
 
 def _parse_json(text: str) -> dict:
